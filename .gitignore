@@ -1,0 +1,20 @@
+# Python and notebooks
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+
+# Local configuration
+.env
+
+# Sensor data and generated outputs
+data/raw/*
+!data/raw/README.md
+data/processed/*
+!data/processed/README.md
+
+# Spark runtime files
+spark-warehouse/
+metastore_db/
+derby.log
+spark-events/
