@@ -1,0 +1,92 @@
+# Docker Compose configuration for our PySpark development environment.
+#
+# Start:       docker compose up -d
+# View logs:   docker compose logs notebook
+# Stop:        docker compose down
+#
+# Create a local .env file before starting:
+#   printf 'LOCAL_UID=%s\nLOCAL_GID=%s\n' "$(id -u)" "$(id -g)" > .env
+#
+# .env contains your Ubuntu user/group IDs and is excluded from Git.
+
+services:
+  # One container runs both JupyterLab and Spark in local mode.
+  # "notebook" is the service name used in Compose commands.
+  notebook:
+
+    # Prepared image containing Python, Java, PySpark, and JupyterLab.
+    # Docker downloads it on the first run.
+    # "latest" can change; replace it with a verified tag or digest
+    # after testing to make the environment reproducible.
+    image: quay.io/jupyter/pyspark-notebook:latest
+
+    # Run processes with your Ubuntu user and group IDs.
+    # Compose substitutes these values from the local .env file.
+    # This helps files created in mounted folders remain owned by you.
+    user: "${LOCAL_UID}:${LOCAL_GID}"
+
+    # Starting directory inside the container.
+    # Our repository is mounted here by the volumes section below.
+    working_dir: /home/jovyan/work
+
+    # Format: "host_address:host_port:container_port"
+    # Bind to 127.0.0.1 so these services are accessible only locally.
+    ports:
+      # JupyterLab: http://localhost:8888
+      # Use the authentication token printed in the container logs.
+      - "127.0.0.1:8888:8888"
+
+      # Spark monitoring UI: http://localhost:4040
+      # Available while a Spark session is running.
+      - "127.0.0.1:4040:4040"
+
+    # Variables passed to processes inside the container.
+    environment:
+
+      # Writable location for user configuration and runtime files.
+      # Files here are temporary and disappear when the container
+      # is removed. Save project work in /home/jovyan/work.
+      HOME: /tmp
+
+      # Spark uses the container's loopback network address.
+      # Suitable for this single-container, local-mode setup.
+      # A multi-container Spark cluster needs different networking.
+      SPARK_LOCAL_IP: "127.0.0.1"
+
+      # Startup arguments for PySpark.
+      # Allocate a 4 GB heap to the Spark driver JVM.
+      # Python, Jupyter, and other processes use additional memory.
+      # "pyspark-shell" is the required trailing application argument.
+      PYSPARK_SUBMIT_ARGS: "--driver-memory 4g pyspark-shell"
+
+    # Bind mounts connect laptop folders to container folders.
+    # Format: host_path:container_path[:options]
+    # Relative host paths are resolved from this Compose file's folder.
+    volumes:
+
+      # Mount the repository with read/write access.
+      # Notebook and code edits are saved directly on your laptop
+      # and survive container removal.
+      - .:/home/jovyan/work
+
+      # Overlay the raw-data folder with a read-only mount.
+      # The container can read the original CSV but cannot modify it.
+      # Dataset path inside the container:
+      # /home/jovyan/work/data/raw/sensor_data.csv
+      - ./data/raw:/home/jovyan/work/data/raw:ro
+
+    # Maximum memory for the whole container—not a reservation.
+    # Includes the Spark JVM, Python, Jupyter, and other processes.
+    # Exceeding this limit can cause processes to be killed.
+    mem_limit: 6g
+
+    # Limit CPU time to the equivalent of two cores.
+    # This does not select particular physical cores or configure
+    # Spark's worker threads; use .master("local[2]") in Python.
+    cpus: 2
+
+    # Start JupyterLab and set its file-browser root to the repository.
+    # Keep default token authentication enabled.
+    command:
+      - start-notebook.py
+      - --ServerApp.root_dir=/home/jovyan/work
