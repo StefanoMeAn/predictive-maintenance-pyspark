@@ -1,0 +1,40 @@
+{
+  "threads": 2,
+  "spark_version": "4.2.0",
+  "python_version": "3.13.15",
+  "input": "/home/jovyan/work/data/processed/sw088_raw.parquet",
+  "input_bytes": 52476346,
+  "shuffle_partitions": 8,
+  "default_parallelism": 8,
+  "max_input_partition_bytes": 16777216,
+  "adaptive_execution": false,
+  "driver_memory": "2g",
+  "timing_scope": "Read, aggregate, and write all hourly features",
+  "cache_policy": "No Spark persistence; OS cache is not cleared",
+  "runs": [
+    {
+      "run": 0,
+      "phase": "warmup",
+      "seconds": 10.110831705999772
+    },
+    {
+      "run": 1,
+      "phase": "measured",
+      "seconds": 4.214873609999813
+    },
+    {
+      "run": 2,
+      "phase": "measured",
+      "seconds": 3.917610371000592
+    },
+    {
+      "run": 3,
+      "phase": "measured",
+      "seconds": 4.121203753000373
+    }
+  ],
+  "median_seconds": 4.121203753000373,
+  "min_seconds": 3.917610371000592,
+  "max_seconds": 4.214873609999813,
+  "retained_features": "/home/jovyan/work/benchmarks/results/spark_local_2/features_run_3"
+}
