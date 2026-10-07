@@ -1,0 +1,64 @@
+{
+  "device": "SW-088",
+  "circuits": [
+    "A5",
+    "A9"
+  ],
+  "target": "First observed overheating flag in each clock hour with an eligible preceding sensor hour; not incident-onset prediction.",
+  "label_rule": "alarm_code & (32 + 64 + 128) != 0",
+  "features": {
+    "sensors": [
+      "S3",
+      "S39",
+      "S40",
+      "S41",
+      "S125",
+      "S181",
+      "S172",
+      "S173"
+    ],
+    "history": "One complete clock hour immediately before the target hour",
+    "minimum_recorded_minutes_per_sensor": 45,
+    "basic_statistics": [
+      "mean"
+    ],
+    "expanded_statistics": [
+      "mean",
+      "min",
+      "max",
+      "std"
+    ]
+  },
+  "splits_by_feature_window_end": {
+    "train": "Before 2021-02-01 UTC",
+    "validation": "2021-02-01 to before 2021-03-01 UTC",
+    "test": "From 2021-03-01 UTC; March results are exploratory"
+  },
+  "methods": [
+    "always_inactive",
+    "always_active",
+    "persistence",
+    "logistic",
+    "weighted_logistic",
+    "expanded_weighted_logistic"
+  ],
+  "logistic_settings": {
+    "regParam": 0.1,
+    "elasticNetParam": 0.0,
+    "maxIter": 100,
+    "threshold": 0.5,
+    "scaling": "Fitted on training data only",
+    "class_weights": "Where used: N_train / (2 * class_count_train)"
+  },
+  "persistence": "Latest observed alarm state strictly before feature cutoff",
+  "undefined_metrics": "Stored as NaN when their denominator is zero",
+  "limitations": [
+    "Sparse alarm readings; missing observations remain unknown.",
+    "Very few positive examples or inactive examples in some groups.",
+    "Observed active spells cross chronological split boundaries.",
+    "This benchmark retains those crossing spells.",
+    "Repeated inspection makes March exploratory, not an untouched test.",
+    "Results apply to eligible observed readings, not all operating hours.",
+    "No validated early-warning performance established."
+  ]
+}
