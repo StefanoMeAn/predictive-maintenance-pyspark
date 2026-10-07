@@ -67,3 +67,33 @@ Reliable early-warning evaluation would require clearer incident ground truth an
 4. Open `notebooks/01_data_exploration.ipynb`, restart the kernel, and run all cells.
 
 Full CSV scans take time. The notebook reuses `data/processed/sw088_raw.parquet` when present; rebuild that subset if the source data changes. The cleaned notebook was successfully rerun end to end in the author's Docker environment.
+
+## Local Spark performance benchmark
+
+I benchmarked hourly feature generation from the approximately 51 MB
+SW-088 Parquet subset, comparing one and two local Spark worker threads.
+
+Each run reads the data, computes all hourly statistics, and writes the
+results to Parquet. Spark startup is excluded. Each configuration runs
+in a fresh Spark process with one warm-up followed by three measured runs.
+
+| Worker threads | Median runtime | Measured range |
+| --- | ---: | ---: |
+| 1 | 5.433 s | 5.424–5.590 s |
+| 2 | 4.121 s | 3.918–4.215 s |
+
+Two threads reduced median runtime by **24.1%**, a **1.32× speedup**.
+
+Both configurations used a 2 GiB driver heap, eight shuffle partitions,
+and disabled adaptive execution. The Docker container was limited to
+two CPUs and 6 GiB RAM.
+
+Output keys and counts matched exactly; floating-point statistics matched
+within tolerance (`rtol=1e-7`, `atol=1e-9`).
+
+These are local warm-run measurements on a small device subset, not a
+distributed scaling benchmark on the full dataset. OS file caching was
+not cleared, and configurations were run sequentially, so run order and
+background activity may affect timings.
+
+Script: `benchmarks/benchmark_hourly_features.py`.
