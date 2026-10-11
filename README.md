@@ -1,6 +1,6 @@
 # Predictive Maintenance with PySpark
 
-I used PySpark to explore approximately **142 million industrial sensor records** and investigate whether recent sensor measurements could help predict recorded overheating alarms. The analysis focuses on device **SW-088** and alarm channels **A5 and A9**.
+This project uses PySpark to analyze approximately **142 million industrial sensor records** and investigate whether recent sensor measurements could help predict recorded overheating alarms. The analysis focuses on device **SW-088** and alarm channels **A5 and A9**.
 
 The results show why a large sensor dataset does not necessarily provide enough independent failure examples for reliable prediction. The evaluation measures observed alarm states; it does not establish advance warning of new failures.
 
@@ -39,7 +39,7 @@ This evaluates observed alarm states. It does **not** establish advance warning 
 
 ### Features and models
 
-Features are computed from `S3`, `S39`, `S40`, `S41`, `S125`, `S181`, `S172`, and `S173`. I compare hourly means with expanded statistics consisting of mean, minimum, maximum, and standard deviation. Each sensor must have at least 45 recorded minutes in the hour.
+Features are computed from `S3`, `S39`, `S40`, `S41`, `S125`, `S181`, `S172`, and `S173`. The experiments compare hourly means with expanded statistics consisting of mean, minimum, maximum, and standard deviation. Each sensor must have at least 45 recorded minutes in the hour.
 
 The benchmark compares six methods on identical evaluation rows: always inactive, always active, persistence, logistic regression, weighted logistic regression, and expanded weighted logistic regression. Persistence uses the latest alarm reading strictly before the feature cutoff.
 
@@ -68,7 +68,7 @@ The notebook calculates metrics directly from predictions and exports `predictio
 
 ### Local Spark performance benchmark
 
-I benchmarked hourly feature generation from the approximately **51 MB** SW-088 Parquet subset using one and two local Spark worker threads. Each run reads the data, computes hourly statistics, and writes the results to Parquet. Spark startup is excluded. Each configuration ran in a fresh Spark process, with one warm-up and three measured runs.
+Hourly feature generation was benchmarked from the approximately **51 MB** SW-088 Parquet subset using one and two local Spark worker threads. Each run reads the data, computes hourly statistics, and writes the results to Parquet. Spark startup is excluded. Each configuration ran in a fresh Spark process, with one warm-up and three measured runs.
 
 | Worker threads | Median runtime | Measured range |
 |---|---:|---:|
@@ -82,7 +82,10 @@ These are local warm-run measurements on a small device subset, not a distribute
 ## Repository Structure
 
 ```text
-.
+predictive-maintenance-pyspark/
+├── README.md
+├── compose.yaml
+├── requirements.txt
 ├── notebooks/
 │   └── 01_data_exploration.ipynb
 ├── data/
@@ -98,21 +101,44 @@ The tree shows the main paths referenced by the analysis; generated benchmark re
 
 ## Installation
 
-Use a Python notebook environment with **PySpark**, a compatible **Java runtime**, **pandas**, and **Matplotlib**. The analysis was run through Docker and VS Code; the reported rerun used **Spark 4.2.0**. The local Spark benchmark used Docker with a 2 GiB driver heap and a 6 GiB container memory limit.
+The project uses **PySpark**, a compatible **Java runtime**, **pandas**, and **Matplotlib**. The recorded notebook rerun used **Spark 4.2.0**. For local development, `compose.yaml` starts a JupyterLab/PySpark container; the Docker image already includes the Python, Java, and Spark environment, so `requirements.txt` is mainly a reference for a separate Python environment. The image is currently tagged `latest`, so Docker builds are not fully pinned. The local Spark benchmark was measured with a 2 GiB driver heap and a 6 GiB container memory limit.
+
+Clone the repository and create the local raw-data directory:
+
+```bash
+git clone https://github.com/StefanoMeAn/predictive-maintenance-pyspark.git
+cd predictive-maintenance-pyspark
+mkdir -p data/raw
+printf 'LOCAL_UID=%s\nLOCAL_GID=%s\n' "$(id -u)" "$(id -g)" > .env
+```
+
+Place the source file at `data/raw/sensor_data.csv`, then start JupyterLab:
+
+```bash
+docker compose up -d
+docker compose logs notebook
+```
+
+Open `http://localhost:8888` and use the Jupyter token shown in the logs. The Spark UI is exposed locally on port 4040 while Spark is running. Stop the container with `docker compose down`.
+
+For a separate Python environment instead of Docker, install the dependencies from `requirements.txt` with `python -m pip install -r requirements.txt`; a compatible Java runtime and Spark configuration are still required. The published results have not been checked against every local installation.
 
 ## Usage
 
 1. Place the source dataset at `data/raw/sensor_data.csv`. The required columns are `when` (Unix milliseconds), `hwid`, `metric`, and `value`.
-2. Set `PROJECT_ROOT` in the first notebook cell to the repository location inside your environment. The existing container setup uses `/home/jovyan/work`.
-3. Open `notebooks/01_data_exploration.ipynb`, restart the kernel, and run all cells.
+2. With the Docker setup, the repository is mounted at `/home/jovyan/work`; check that `PROJECT_ROOT` in the first notebook cell points there.
+3. Open `notebooks/01_data_exploration.ipynb` in JupyterLab, restart the kernel, and run all cells.
 
 Full CSV scans take time. The notebook reuses `data/processed/sw088_raw.parquet` when it is present; rebuild the subset if the source data changes. The cleaned notebook was rerun end to end in the author’s Docker environment.
 
-To run the local hourly-feature benchmark, use:
+The hourly-feature benchmark requires the generated SW-088 Parquet subset and explicit `--threads` and `--output` arguments. From a terminal inside the running container (for example with `docker compose exec notebook bash`), run:
 
 ```bash
-python benchmarks/benchmark_hourly_features.py
+python benchmarks/benchmark_hourly_features.py --threads 1 --output benchmarks/local_run_1
+python benchmarks/benchmark_hourly_features.py --threads 2 --output benchmarks/local_run_2
 ```
+
+Choose output paths that do not already exist. The script uses `/home/jovyan/work/data/processed/sw088_raw.parquet` as its input and writes timing reports under the supplied output directory.
 
 ## Limitations and Future Work
 

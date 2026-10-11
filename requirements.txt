@@ -1,0 +1,8 @@
+# Dependencies for a separate local Python environment.
+# The Docker Compose image already provides Spark, Java and JupyterLab.
+# The original notebook rerun reported Spark 4.2.0.
+pyspark==4.2.0
+pandas>=2.2,<3
+matplotlib>=3.8,<4
+jupyterlab>=4,<5
+ipykernel>=6.29,<7
